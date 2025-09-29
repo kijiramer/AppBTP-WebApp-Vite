@@ -134,6 +134,14 @@ export default function Login() {
               </div>
 
               <div className="text-center">
+                <div className="mb-3 p-3" style={{ 
+                  backgroundColor: '#f8f9fa', 
+                  borderRadius: '8px',
+                  fontSize: '0.9rem'
+                }}>
+                  <strong>🔧 Mode Demo :</strong><br />
+                  <code>demo@appbtp.com</code> / <code>demo</code>
+                </div>
                 <p className="mb-0">
                   Pas encore de compte ?{' '}
                   <Link to="/signup" style={{ color: '#F85F6A', textDecoration: 'none' }}>

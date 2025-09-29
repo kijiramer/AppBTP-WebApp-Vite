@@ -41,29 +41,57 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       setLoading(true);
-      const response = await axios.post(`${API_BASE_URL}/login`, {
-        email,
-        password,
-      });
-
-      if (response.data.token) {
-        const authToken = response.data.token;
-        Storage.setItem('token', authToken);
-        setToken(authToken);
+      
+      // Mode Demo - Connexion sans backend
+      if (email === 'demo@appbtp.com' && password === 'demo') {
+        const demoUser = {
+          id: 1,
+          name: 'Utilisateur Demo',
+          email: 'demo@appbtp.com',
+          company: 'AppBTP Demo'
+        };
+        const demoToken = 'demo-token-12345';
         
-        const userData = await loadUser(authToken);
-        if (userData) {
-          setUser(userData);
-          return { success: true, user: userData };
-        }
+        Storage.setItem('token', demoToken);
+        setToken(demoToken);
+        setUser(demoUser);
+        
+        return { success: true, user: demoUser };
       }
       
-      return { success: false, message: 'Échec de la connexion' };
+      // Tentative de connexion au backend réel
+      try {
+        const response = await axios.post(`${API_BASE_URL}/login`, {
+          email,
+          password,
+        });
+
+        if (response.data.token) {
+          const authToken = response.data.token;
+          Storage.setItem('token', authToken);
+          setToken(authToken);
+          
+          const userData = await loadUser(authToken);
+          if (userData) {
+            setUser(userData);
+            return { success: true, user: userData };
+          }
+        }
+        
+        return { success: false, message: 'Échec de la connexion' };
+      } catch (backendError) {
+        // Si le backend n'est pas accessible, proposer le mode demo
+        return { 
+          success: false, 
+          message: 'Backend non accessible. Utilisez demo@appbtp.com / demo pour tester l\'interface' 
+        };
+      }
+      
     } catch (error) {
       console.error('Erreur lors de la connexion:', error);
       return { 
         success: false, 
-        message: error.response?.data?.message || 'Erreur de connexion' 
+        message: 'Erreur de connexion. Utilisez demo@appbtp.com / demo pour tester' 
       };
     } finally {
       setLoading(false);
