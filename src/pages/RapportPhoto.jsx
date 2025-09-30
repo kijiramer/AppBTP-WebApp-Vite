@@ -355,9 +355,9 @@ export default function RapportPhoto() {
         }
       }
 
-      // Titre du rapport (une seule fois au début) - Centré et souligné
+      // Titre du rapport (une seule fois au début) - Centré et souligné avec police Times (style Bodoni)
       pdf.setFontSize(20);
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('times', 'bold');
       const titleText = `Rapport Photo d'Intervention - ${chantierName}`;
       const titleWidth = pdf.getTextWidth(titleText);
       const centerX = (pdf.internal.pageSize.width - titleWidth) / 2;
@@ -373,6 +373,12 @@ export default function RapportPhoto() {
 
       yPosition += 15;
 
+      // Variables de comptage des photos par page (global pour tout le PDF)
+      let currentPageNumber = 1;
+      let photosOnCurrentPage = 0;
+      const maxPhotosFirstPage = 3;
+      const maxPhotosOtherPages = 4;
+
       // Pour chaque groupe de constatations
       let groupIndex = 0;
       for (const key in groupedConstatations) {
@@ -381,7 +387,9 @@ export default function RapportPhoto() {
         // Vérifier si on a besoin d'une nouvelle page pour afficher les infos du groupe
         if (yPosition > 240) {
           pdf.addPage();
+          currentPageNumber++;
           yPosition = 30; // Espace pour le logo pages 2+ (10 + 15 + 5)
+          photosOnCurrentPage = 0;
         }
 
         // Afficher les informations du chantier pour ce groupe
@@ -390,49 +398,69 @@ export default function RapportPhoto() {
           yPosition += 10;
         }
 
-        // Créer un tableau centré avec 2 lignes et 1 colonne
+        // Créer un tableau centré avec 3 lignes et 1 colonne
         const tableWidth = 160;
         const tableX = (pdf.internal.pageSize.width - tableWidth) / 2;
         const rowHeight = 10;
+        const radius = 3;
 
-        // Ligne 1 : Promoteur, Ville, Tâche
-        const line1 = `Promoteur : ${group.info.company} - Ville : ${group.info.city} - Tâche : ${group.info.task}`;
-
-        // Ligne 2 : Date(s)
-        const startDate = new Date(group.info.selectedDate).toLocaleDateString('fr-FR');
-        let line2;
-        if (group.info.endDate) {
-          const endDateFormatted = new Date(group.info.endDate).toLocaleDateString('fr-FR');
-          line2 = `Intervention du ${startDate} au ${endDateFormatted}`;
-        } else {
-          line2 = `Intervention le : ${startDate}`;
-        }
-
-        // Dessiner le tableau
+        // Dessiner le tableau avec coins arrondis
         pdf.setLineWidth(0.5);
         pdf.setDrawColor(0, 0, 0);
 
-        // Bordures du tableau
-        pdf.rect(tableX, yPosition, tableWidth, rowHeight * 2);
-        // Ligne horizontale entre les 2 lignes
+        // Utiliser roundedRect si disponible, sinon rectangle normal
+        if (typeof pdf.roundedRect === 'function') {
+          pdf.roundedRect(tableX, yPosition, tableWidth, rowHeight * 3, radius, radius);
+        } else {
+          pdf.rect(tableX, yPosition, tableWidth, rowHeight * 3);
+        }
+
+        // Lignes horizontales entre les lignes
         pdf.line(tableX, yPosition + rowHeight, tableX + tableWidth, yPosition + rowHeight);
+        pdf.line(tableX, yPosition + rowHeight * 2, tableX + tableWidth, yPosition + rowHeight * 2);
 
-        // Texte dans le tableau
+        // Utiliser une police stylée (Helvetica)
+        pdf.setFont('helvetica');
+
+        // Ligne 1 : PROMOTEUR et VILLE (en gras et majuscules)
         pdf.setFontSize(9);
-        pdf.setFont(undefined, 'bold');
-        pdf.text(line1, tableX + 2, yPosition + 7);
-        pdf.text(line2, tableX + 2, yPosition + rowHeight + 7);
+        pdf.setFont('helvetica', 'bold');
+        const promoteurText = `PROMOTEUR: ${group.info.company.toUpperCase()} - VILLE: ${group.info.city.toUpperCase()}`;
+        pdf.text(promoteurText, tableX + 2, yPosition + 7);
 
-        yPosition += rowHeight * 2 + 10;
+        // Ligne 2 : Mission (en regular)
+        pdf.setFont('helvetica', 'normal');
+        const missionText = `Mission: ${group.info.task}`;
+        pdf.text(missionText, tableX + 2, yPosition + rowHeight + 7);
+
+        // Ligne 3 : Intervention (en regular)
+        pdf.setFont('helvetica', 'normal');
+        const startDate = new Date(group.info.selectedDate).toLocaleDateString('fr-FR');
+        let interventionText;
+        if (group.info.endDate) {
+          const endDateFormatted = new Date(group.info.endDate).toLocaleDateString('fr-FR');
+          interventionText = `Intervention du ${startDate} au ${endDateFormatted}`;
+        } else {
+          interventionText = `Intervention le: ${startDate}`;
+        }
+        pdf.text(interventionText, tableX + 2, yPosition + rowHeight * 2 + 7);
+
+        yPosition += rowHeight * 3 + 10;
 
         // Liste des photos pour ce chantier
+
         for (let i = 0; i < group.photos.length; i++) {
           const constatation = group.photos[i];
 
+          // Déterminer le nombre maximum de photos pour la page actuelle
+          const maxPhotosOnPage = currentPageNumber === 1 ? maxPhotosFirstPage : maxPhotosOtherPages;
+
           // Vérifier si on a besoin d'une nouvelle page
-          if (yPosition > 220) {
+          if (photosOnCurrentPage >= maxPhotosOnPage) {
             pdf.addPage();
+            currentPageNumber++;
             yPosition = 30; // Espace pour le logo pages 2+ (10 + 15 + 5)
+            photosOnCurrentPage = 0;
           }
 
           // Images avant/après
@@ -440,7 +468,7 @@ export default function RapportPhoto() {
             try {
               // Label et Image AVANT
               pdf.setFontSize(10);
-              pdf.setFont(undefined, 'bold');
+              pdf.setFont('helvetica', 'bold');
               pdf.text('AVANT', 45, yPosition - 2);
               pdf.addImage(constatation.imageAvant, 'JPEG', 20, yPosition, 70, 50);
 
@@ -475,11 +503,12 @@ export default function RapportPhoto() {
 
               // Label et Image APRÈS
               pdf.setFontSize(10);
-              pdf.setFont(undefined, 'bold');
+              pdf.setFont('helvetica', 'bold');
               pdf.text('APRÈS', 135, yPosition - 2);
               pdf.addImage(constatation.imageApres, 'JPEG', 110, yPosition, 70, 50);
 
               yPosition += 55;
+              photosOnCurrentPage++;
             } catch (error) {
               console.warn('Erreur lors de l\'ajout des images:', error);
               pdf.setFont(undefined, 'normal');
@@ -677,7 +706,7 @@ export default function RapportPhoto() {
               <Row>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Tâche</Form.Label>
+                    <Form.Label>Mission</Form.Label>
                     <Form.Control
                       type="text"
                       value={rapportInfo.task}
@@ -907,7 +936,7 @@ export default function RapportPhoto() {
                           <div className="mb-3">
                             <strong>Ville :</strong> {firstPhoto.city}<br/>
                             <strong>Bâtiment :</strong> {firstPhoto.building}<br/>
-                            <strong>Tâche :</strong> {firstPhoto.task}<br/>
+                            <strong>Mission :</strong> {firstPhoto.task}<br/>
                             <strong>Promoteur :</strong> {firstPhoto.company}<br/>
                             <strong>Date :</strong> {new Date(firstPhoto.selectedDate).toLocaleDateString('fr-FR')}<br/>
                             <strong>Nombre de photos :</strong> {reportPhotos.length} paire(s)
