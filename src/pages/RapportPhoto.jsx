@@ -255,30 +255,36 @@ export default function RapportPhoto() {
       let groupIndex = 0;
       for (const key in groupedConstatations) {
         const group = groupedConstatations[key];
+        let isFirstPageOfGroup = true;
 
         // Ajouter une nouvelle page si ce n'est pas le premier groupe
         if (groupIndex > 0) {
           pdf.addPage();
           yPosition = 20;
+          isFirstPageOfGroup = true;
         }
 
-        // Titre du rapport
-        pdf.setFontSize(20);
-        pdf.text('Rapport Photo - Constatations', 20, yPosition);
-        yPosition += 15;
+        // Titre du rapport et informations (seulement sur la première page)
+        if (isFirstPageOfGroup) {
+          pdf.setFontSize(20);
+          pdf.text('Rapport Photo - Constatations', 20, yPosition);
+          yPosition += 15;
 
-        // Informations du chantier (affichées UNE SEULE FOIS)
-        pdf.setFontSize(12);
-        pdf.setFont(undefined, 'bold');
-        pdf.text(`Entreprise : ${group.info.company} - Ville : ${group.info.city} - Tâche : ${group.info.task}`, 20, yPosition);
-        yPosition += 8;
-        pdf.text(`Intervention le : ${new Date(group.info.selectedDate).toLocaleDateString('fr-FR')}`, 20, yPosition);
-        yPosition += 15;
+          // Informations du chantier (affichées UNE SEULE FOIS)
+          pdf.setFontSize(12);
+          pdf.setFont(undefined, 'bold');
+          pdf.text(`Entreprise : ${group.info.company} - Ville : ${group.info.city} - Tâche : ${group.info.task}`, 20, yPosition);
+          yPosition += 8;
+          pdf.text(`Intervention le : ${new Date(group.info.selectedDate).toLocaleDateString('fr-FR')}`, 20, yPosition);
+          yPosition += 15;
 
-        // Separator line
-        pdf.setLineWidth(0.5);
-        pdf.line(20, yPosition, 190, yPosition);
-        yPosition += 10;
+          // Separator line
+          pdf.setLineWidth(0.5);
+          pdf.line(20, yPosition, 190, yPosition);
+          yPosition += 10;
+
+          isFirstPageOfGroup = false;
+        }
 
         // Liste des photos pour ce chantier
         for (let i = 0; i < group.photos.length; i++) {
@@ -296,10 +302,34 @@ export default function RapportPhoto() {
               // Image AVANT
               pdf.addImage(constatation.imageAvant, 'JPEG', 20, yPosition, 70, 50);
 
-              // Flèche entre les deux images
-              pdf.setFontSize(16);
-              pdf.setFont(undefined, 'bold');
-              pdf.text('→', 100, yPosition + 25);
+              // Flèche horizontale entre les deux images (ligne + triangle)
+              const arrowY = yPosition + 25;
+              const arrowStartX = 92;
+              const arrowEndX = 108;
+
+              // Ligne horizontale
+              pdf.setLineWidth(1.5);
+              pdf.setDrawColor(0, 0, 0);
+              pdf.line(arrowStartX, arrowY, arrowEndX - 3, arrowY);
+
+              // Triangle (pointe de la flèche) - dessiné avec polygon
+              pdf.setFillColor(0, 0, 0);
+              const trianglePoints = [
+                { x: arrowEndX, y: arrowY },
+                { x: arrowEndX - 3, y: arrowY - 2 },
+                { x: arrowEndX - 3, y: arrowY + 2 }
+              ];
+              pdf.lines(
+                [
+                  [trianglePoints[1].x - trianglePoints[0].x, trianglePoints[1].y - trianglePoints[0].y],
+                  [trianglePoints[2].x - trianglePoints[1].x, trianglePoints[2].y - trianglePoints[1].y],
+                  [trianglePoints[0].x - trianglePoints[2].x, trianglePoints[0].y - trianglePoints[2].y]
+                ],
+                trianglePoints[0].x,
+                trianglePoints[0].y,
+                [1, 1],
+                'F'
+              );
 
               // Image APRÈS
               pdf.addImage(constatation.imageApres, 'JPEG', 110, yPosition, 70, 50);
@@ -314,14 +344,36 @@ export default function RapportPhoto() {
             }
           }
 
-          // Ajouter une flèche entre les paires de photos (sauf après la dernière)
+          // Ajouter une flèche verticale entre les paires de photos (sauf après la dernière)
           if (i < group.photos.length - 1) {
-            pdf.setFontSize(20);
-            pdf.setFont(undefined, 'bold');
-            const arrowText = '↓';
-            const textWidth = pdf.getTextWidth(arrowText);
-            const centerX = (pdf.internal.pageSize.width - textWidth) / 2;
-            pdf.text(arrowText, centerX, yPosition + 5);
+            const centerX = pdf.internal.pageSize.width / 2;
+            const arrowStartY = yPosition + 5;
+            const arrowEndY = yPosition + 12;
+
+            // Ligne verticale
+            pdf.setLineWidth(1.5);
+            pdf.setDrawColor(0, 0, 0);
+            pdf.line(centerX, arrowStartY, centerX, arrowEndY - 3);
+
+            // Triangle pointant vers le bas (pointe de la flèche)
+            pdf.setFillColor(0, 0, 0);
+            const verticalTriangle = [
+              { x: centerX, y: arrowEndY },
+              { x: centerX - 2, y: arrowEndY - 3 },
+              { x: centerX + 2, y: arrowEndY - 3 }
+            ];
+            pdf.lines(
+              [
+                [verticalTriangle[1].x - verticalTriangle[0].x, verticalTriangle[1].y - verticalTriangle[0].y],
+                [verticalTriangle[2].x - verticalTriangle[1].x, verticalTriangle[2].y - verticalTriangle[1].y],
+                [verticalTriangle[0].x - verticalTriangle[2].x, verticalTriangle[0].y - verticalTriangle[2].y]
+              ],
+              verticalTriangle[0].x,
+              verticalTriangle[0].y,
+              [1, 1],
+              'F'
+            );
+
             yPosition += 15;
           } else {
             yPosition += 10;
