@@ -26,6 +26,9 @@ export default function RapportPhoto() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Numéro de rapport actuel (dossier)
+  const [currentReportNumber, setCurrentReportNumber] = useState(1);
+
   // Informations générales du rapport
   const [rapportInfo, setRapportInfo] = useState({
     city: '',
@@ -59,7 +62,14 @@ export default function RapportPhoto() {
       const response = await axios.get(`${API_BASE_URL}/constatations`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setConstatations(response.data.constatations || []);
+      const allConstatations = response.data.constatations || [];
+      setConstatations(allConstatations);
+
+      // Calculer le prochain numéro de rapport disponible
+      if (allConstatations.length > 0) {
+        const maxReportNumber = Math.max(...allConstatations.map(c => c.reportNumber || 0));
+        setCurrentReportNumber(maxReportNumber + 1);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des constatations:', error);
       setError('Impossible de charger les constatations');
@@ -173,6 +183,7 @@ export default function RapportPhoto() {
         const imageApresBase64 = await convertImageToBase64(photo.imageApres);
 
         const constatationData = {
+          reportNumber: currentReportNumber,
           ...rapportInfo,
           imageAvant: imageAvantBase64,
           imageApres: imageApresBase64
@@ -192,7 +203,9 @@ export default function RapportPhoto() {
         });
       }
 
-      setSuccess(`Rapport photo créé avec succès ! (${photos.length} paire(s) de photos)`);
+      setSuccess(`Dossier ${currentReportNumber} créé avec succès ! (${photos.length} paire(s) de photos)`);
+      // Incrémenter le numéro pour le prochain rapport
+      setCurrentReportNumber(currentReportNumber + 1);
       resetForm();
       fetchConstatations();
     } catch (error) {
@@ -459,7 +472,7 @@ export default function RapportPhoto() {
               textAlign: 'center'
             }}>
               <h2 style={{ fontWeight: '700', marginBottom: '10px' }}>
-                📷 Nouveau Rapport Photo
+                📷 Dossier {currentReportNumber}
               </h2>
               <p style={{ opacity: '0.9' }}>
                 Saisissez les informations du chantier, puis ajoutez plusieurs photos avant/après
@@ -692,78 +705,108 @@ export default function RapportPhoto() {
                 </Card.Body>
               </Card>
             ) : (
-              <Row>
-                {constatations.map((constatation, index) => (
-                  <Col key={constatation._id} xs={12} md={6} lg={4} className="mb-4">
-                    <Card className="h-100">
-                      <Card.Header
-                        style={{
-                          background: 'linear-gradient(135deg, #F85F6A 0%, #e74c3c 100%)',
-                          color: 'white',
-                          fontWeight: '600'
-                        }}
-                      >
-                        📋 Rapport {index + 1}
-                      </Card.Header>
-                      <Card.Body>
-                        <div className="mb-3">
-                          <strong>Ville :</strong> {constatation.city}<br/>
-                          <strong>Bâtiment :</strong> {constatation.building}<br/>
-                          <strong>Tâche :</strong> {constatation.task}<br/>
-                          <strong>Entreprise :</strong> {constatation.company}<br/>
-                          <strong>Date :</strong> {new Date(constatation.selectedDate).toLocaleDateString('fr-FR')}
-                        </div>
+              <>
+                {(() => {
+                  // Grouper les constatations par reportNumber
+                  const groupedReports = {};
+                  constatations.forEach(c => {
+                    if (!groupedReports[c.reportNumber]) {
+                      groupedReports[c.reportNumber] = [];
+                    }
+                    groupedReports[c.reportNumber].push(c);
+                  });
 
-                        {constatation.imageAvant && constatation.imageApres && (
+                  // Afficher chaque dossier
+                  return Object.keys(groupedReports).sort((a, b) => Number(b) - Number(a)).map(reportNum => {
+                    const reportPhotos = groupedReports[reportNum];
+                    const firstPhoto = reportPhotos[0];
+
+                    return (
+                      <Card key={reportNum} className="mb-4">
+                        <Card.Header
+                          style={{
+                            background: 'linear-gradient(135deg, #F85F6A 0%, #e74c3c 100%)',
+                            color: 'white',
+                            fontWeight: '600',
+                            fontSize: '1.2rem'
+                          }}
+                        >
+                          📁 Dossier {reportNum}
+                        </Card.Header>
+                        <Card.Body>
+                          {/* Informations du dossier */}
                           <div className="mb-3">
-                            <div className="d-flex justify-content-between align-items-center">
-                              <div className="text-center" style={{ width: '45%' }}>
-                                <small className="text-muted d-block mb-1">AVANT</small>
-                                <Image
-                                  src={constatation.imageAvant}
-                                  alt="Avant"
-                                  style={{
-                                    width: '100%',
-                                    height: '80px',
-                                    objectFit: 'cover',
-                                    borderRadius: '8px',
-                                    border: '2px solid #ddd'
-                                  }}
-                                />
-                              </div>
-                              <div style={{ fontSize: '24px', color: '#F85F6A' }}>→</div>
-                              <div className="text-center" style={{ width: '45%' }}>
-                                <small className="text-muted d-block mb-1">APRÈS</small>
-                                <Image
-                                  src={constatation.imageApres}
-                                  alt="Après"
-                                  style={{
-                                    width: '100%',
-                                    height: '80px',
-                                    objectFit: 'cover',
-                                    borderRadius: '8px',
-                                    border: '2px solid #ddd'
-                                  }}
-                                />
-                              </div>
-                            </div>
+                            <strong>Ville :</strong> {firstPhoto.city}<br/>
+                            <strong>Bâtiment :</strong> {firstPhoto.building}<br/>
+                            <strong>Tâche :</strong> {firstPhoto.task}<br/>
+                            <strong>Entreprise :</strong> {firstPhoto.company}<br/>
+                            <strong>Date :</strong> {new Date(firstPhoto.selectedDate).toLocaleDateString('fr-FR')}<br/>
+                            <strong>Nombre de photos :</strong> {reportPhotos.length} paire(s)
                           </div>
-                        )}
 
-                        <div className="d-grid mt-3">
-                          <Button
-                            variant="danger"
-                            onClick={() => handleDelete(constatation._id)}
-                            disabled={loading}
-                          >
-                            🗑️ Supprimer ce rapport
-                          </Button>
-                        </div>
-                      </Card.Body>
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
+                          {/* Photos du dossier */}
+                          <Row>
+                            {reportPhotos.map((constatation, photoIndex) => (
+                              <Col key={constatation._id} xs={12} md={6} lg={4} className="mb-3">
+                                <Card>
+                                  <Card.Header className="text-center" style={{ background: '#f8f9fa', fontWeight: '600' }}>
+                                    Photo {photoIndex + 1}
+                                  </Card.Header>
+                                  <Card.Body>
+                                    {constatation.imageAvant && constatation.imageApres && (
+                                      <div className="d-flex justify-content-between align-items-center">
+                                        <div className="text-center" style={{ width: '45%' }}>
+                                          <small className="text-muted d-block mb-1">AVANT</small>
+                                          <Image
+                                            src={constatation.imageAvant}
+                                            alt="Avant"
+                                            style={{
+                                              width: '100%',
+                                              height: '80px',
+                                              objectFit: 'cover',
+                                              borderRadius: '8px',
+                                              border: '2px solid #ddd'
+                                            }}
+                                          />
+                                        </div>
+                                        <div style={{ fontSize: '24px', color: '#F85F6A' }}>→</div>
+                                        <div className="text-center" style={{ width: '45%' }}>
+                                          <small className="text-muted d-block mb-1">APRÈS</small>
+                                          <Image
+                                            src={constatation.imageApres}
+                                            alt="Après"
+                                            style={{
+                                              width: '100%',
+                                              height: '80px',
+                                              objectFit: 'cover',
+                                              borderRadius: '8px',
+                                              border: '2px solid #ddd'
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                    <div className="d-grid mt-2">
+                                      <Button
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={() => handleDelete(constatation._id)}
+                                        disabled={loading}
+                                      >
+                                        🗑️ Supprimer
+                                      </Button>
+                                    </div>
+                                  </Card.Body>
+                                </Card>
+                              </Col>
+                            ))}
+                          </Row>
+                        </Card.Body>
+                      </Card>
+                    );
+                  });
+                })()}
+              </>
             )}
           </Col>
         </Row>
