@@ -241,7 +241,7 @@ export default function RapportPhoto() {
   };
 
   const handleDelete = async (constatationId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce rapport photo ?')) {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce rapport photo d\'intervention ?')) {
       return;
     }
 
@@ -261,13 +261,36 @@ export default function RapportPhoto() {
   };
 
   const exportToPDF = async () => {
+    // Demander quel dossier exporter
+    const availableFolders = [...new Set(constatations.map(c => c.reportNumber))].sort((a, b) => a - b);
+
+    if (availableFolders.length === 0) {
+      setError('Aucun dossier à exporter');
+      return;
+    }
+
+    const folderChoice = prompt(`Quel dossier voulez-vous exporter ?\nDossiers disponibles : ${availableFolders.join(', ')}\n\nEntrez le numéro du dossier :`);
+
+    if (!folderChoice) {
+      return; // L'utilisateur a annulé
+    }
+
+    const selectedFolder = parseInt(folderChoice);
+    if (!availableFolders.includes(selectedFolder)) {
+      setError(`Le dossier ${selectedFolder} n'existe pas`);
+      return;
+    }
+
     try {
       const pdf = new jsPDF();
       let yPosition = 20;
 
+      // Filtrer les constatations pour le dossier sélectionné
+      const folderConstatations = constatations.filter(c => c.reportNumber === selectedFolder);
+
       // Grouper les constatations par chantier (city, building, task, company, date)
       const groupedConstatations = {};
-      constatations.forEach((constatation) => {
+      folderConstatations.forEach((constatation) => {
         const key = `${constatation.city}|${constatation.building}|${constatation.task}|${constatation.company}|${constatation.selectedDate}`;
         if (!groupedConstatations[key]) {
           groupedConstatations[key] = {
@@ -286,7 +309,7 @@ export default function RapportPhoto() {
 
       // Titre du rapport (une seule fois au début)
       pdf.setFontSize(20);
-      pdf.text('Rapport Photo - Constatations', 20, yPosition);
+      pdf.text(`Rapport Photo d'Intervention - Dossier ${selectedFolder}`, 20, yPosition);
       yPosition += 15;
 
       // Pour chaque groupe de constatations
@@ -383,7 +406,7 @@ export default function RapportPhoto() {
         groupIndex++;
       }
 
-      const fileName = `rapport-photo-${new Date().toISOString().split('T')[0]}.pdf`;
+      const fileName = `rapport-intervention-dossier-${selectedFolder}-${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
 
       setSuccess('PDF exporté avec succès !');
@@ -420,14 +443,14 @@ export default function RapportPhoto() {
       >
         <Container>
           <Navbar.Brand style={{ fontWeight: '600', fontSize: '1.5rem' }}>
-            📷 Rapport Photo
+            📷 Rapport Photo d'Intervention
           </Navbar.Brand>
 
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link onClick={() => navigate('/dashboard')}>Accueil</Nav.Link>
-              <Nav.Link active>Rapport Photo</Nav.Link>
+              <Nav.Link active>Rapport Photo d'Intervention</Nav.Link>
             </Nav>
 
             <Nav>
@@ -677,7 +700,7 @@ export default function RapportPhoto() {
         <Row className="mb-4">
           <Col>
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <h3>📚 Rapports enregistrés</h3>
+              <h3>📚 Rapports d'intervention enregistrés</h3>
               {constatations.length > 0 && (
                 <Button
                   variant="outline-primary"
@@ -700,7 +723,7 @@ export default function RapportPhoto() {
             ) : constatations.length === 0 ? (
               <Card className="text-center">
                 <Card.Body>
-                  <h5>Aucun rapport photo enregistré</h5>
+                  <h5>Aucun rapport photo d'intervention enregistré</h5>
                   <p className="text-muted">Créez votre premier rapport ci-dessus</p>
                 </Card.Body>
               </Card>
