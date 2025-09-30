@@ -166,8 +166,15 @@ export default function RapportPhoto() {
       };
 
       console.log('Envoi des données au backend...');
+      console.log('Token utilisé:', token);
+      console.log('Token length:', token?.length);
+
+      if (!token) {
+        throw new Error('Token manquant - veuillez vous reconnecter');
+      }
+
       const response = await axios.post(`${API_BASE_URL}/constatations`, constatationData, {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
@@ -181,10 +188,12 @@ export default function RapportPhoto() {
     } catch (error) {
       console.error('Erreur complète:', error);
       console.error('Message d\'erreur:', error.message);
-      
+
       if (error.response) {
-        console.error('Réponse du serveur:', error.response.data);
-        setError(`Erreur serveur: ${error.response.data.message || error.response.status}`);
+        console.error('Réponse du serveur:', JSON.stringify(error.response.data, null, 2));
+        console.error('Status:', error.response.status);
+        console.error('Headers:', error.response.headers);
+        setError(`Erreur serveur: ${error.response.data?.message || error.response.data?.error || error.response.status}`);
       } else if (error.request) {
         console.error('Pas de réponse du serveur');
         setError('Pas de réponse du serveur. Vérifiez votre connexion.');
