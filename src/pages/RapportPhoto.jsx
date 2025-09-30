@@ -101,7 +101,7 @@ export default function RapportPhoto() {
       
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const img = new Image();
+      const img = new window.Image();
       
       img.onload = () => {
         // Redimensionner l'image si elle est trop grande
