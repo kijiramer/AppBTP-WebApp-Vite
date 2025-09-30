@@ -227,6 +227,26 @@ export default function RapportPhoto() {
     navigate('/login');
   };
 
+  const handleDelete = async (constatationId) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce rapport photo ?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await axios.delete(`${API_BASE_URL}/constatations/${constatationId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSuccess('Rapport supprimé avec succès !');
+      fetchConstatations();
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      setError('Impossible de supprimer le rapport');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const exportToPDF = async () => {
     try {
       const pdf = new jsPDF();
@@ -729,6 +749,16 @@ export default function RapportPhoto() {
                             </div>
                           </div>
                         )}
+
+                        <div className="d-grid mt-3">
+                          <Button
+                            variant="danger"
+                            onClick={() => handleDelete(constatation._id)}
+                            disabled={loading}
+                          >
+                            🗑️ Supprimer ce rapport
+                          </Button>
+                        </div>
                       </Card.Body>
                     </Card>
                   </Col>
