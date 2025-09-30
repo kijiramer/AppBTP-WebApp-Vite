@@ -21,6 +21,7 @@ import { API_BASE_URL } from '../config/api';
 import { jsPDF } from 'jspdf';
 import './RapportPhoto.css';
 
+// Fix: Using named import for jsPDF v2.5.2 compatibility
 export default function RapportPhoto() {
   const [constatations, setConstatations] = useState([]);
   const [loading, setLoading] = useState(false);
