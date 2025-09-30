@@ -1,5 +1,5 @@
 // Configuration API pour la webapp AppBTP
-export const API_BASE_URL = 'http://192.168.1.89:8082';
+export const API_BASE_URL = 'https://app-btp-backend-qk98w0ik1-kijis-projects.vercel.app';
 
 export const endpoints = {
   login: '/login',
