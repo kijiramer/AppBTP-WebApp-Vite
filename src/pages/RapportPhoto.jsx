@@ -251,40 +251,39 @@ export default function RapportPhoto() {
         groupedConstatations[key].photos.push(constatation);
       });
 
+      // Titre du rapport (une seule fois au début)
+      pdf.setFontSize(20);
+      pdf.text('Rapport Photo - Constatations', 20, yPosition);
+      yPosition += 15;
+
       // Pour chaque groupe de constatations
       let groupIndex = 0;
       for (const key in groupedConstatations) {
         const group = groupedConstatations[key];
-        let isFirstPageOfGroup = true;
 
-        // Ajouter une nouvelle page si ce n'est pas le premier groupe
-        if (groupIndex > 0) {
+        // Vérifier si on a besoin d'une nouvelle page pour afficher les infos du groupe
+        if (yPosition > 240) {
           pdf.addPage();
           yPosition = 20;
-          isFirstPageOfGroup = true;
         }
 
-        // Titre du rapport et informations (seulement sur la première page)
-        if (isFirstPageOfGroup) {
-          pdf.setFontSize(20);
-          pdf.text('Rapport Photo - Constatations', 20, yPosition);
-          yPosition += 15;
-
-          // Informations du chantier (affichées UNE SEULE FOIS)
-          pdf.setFontSize(12);
-          pdf.setFont(undefined, 'bold');
-          pdf.text(`Entreprise : ${group.info.company} - Ville : ${group.info.city} - Tâche : ${group.info.task}`, 20, yPosition);
-          yPosition += 8;
-          pdf.text(`Intervention le : ${new Date(group.info.selectedDate).toLocaleDateString('fr-FR')}`, 20, yPosition);
-          yPosition += 15;
-
-          // Separator line
-          pdf.setLineWidth(0.5);
-          pdf.line(20, yPosition, 190, yPosition);
+        // Afficher les informations du chantier pour ce groupe
+        if (groupIndex > 0) {
+          // Espacement entre les groupes
           yPosition += 10;
-
-          isFirstPageOfGroup = false;
         }
+
+        pdf.setFontSize(12);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`Entreprise : ${group.info.company} - Ville : ${group.info.city} - Tâche : ${group.info.task}`, 20, yPosition);
+        yPosition += 8;
+        pdf.text(`Intervention le : ${new Date(group.info.selectedDate).toLocaleDateString('fr-FR')}`, 20, yPosition);
+        yPosition += 15;
+
+        // Separator line
+        pdf.setLineWidth(0.5);
+        pdf.line(20, yPosition, 190, yPosition);
+        yPosition += 10;
 
         // Liste des photos pour ce chantier
         for (let i = 0; i < group.photos.length; i++) {
@@ -344,40 +343,8 @@ export default function RapportPhoto() {
             }
           }
 
-          // Ajouter une flèche verticale entre les paires de photos (sauf après la dernière)
-          if (i < group.photos.length - 1) {
-            const centerX = pdf.internal.pageSize.width / 2;
-            const arrowStartY = yPosition + 5;
-            const arrowEndY = yPosition + 12;
-
-            // Ligne verticale
-            pdf.setLineWidth(1.5);
-            pdf.setDrawColor(0, 0, 0);
-            pdf.line(centerX, arrowStartY, centerX, arrowEndY - 3);
-
-            // Triangle pointant vers le bas (pointe de la flèche)
-            pdf.setFillColor(0, 0, 0);
-            const verticalTriangle = [
-              { x: centerX, y: arrowEndY },
-              { x: centerX - 2, y: arrowEndY - 3 },
-              { x: centerX + 2, y: arrowEndY - 3 }
-            ];
-            pdf.lines(
-              [
-                [verticalTriangle[1].x - verticalTriangle[0].x, verticalTriangle[1].y - verticalTriangle[0].y],
-                [verticalTriangle[2].x - verticalTriangle[1].x, verticalTriangle[2].y - verticalTriangle[1].y],
-                [verticalTriangle[0].x - verticalTriangle[2].x, verticalTriangle[0].y - verticalTriangle[2].y]
-              ],
-              verticalTriangle[0].x,
-              verticalTriangle[0].y,
-              [1, 1],
-              'F'
-            );
-
-            yPosition += 15;
-          } else {
-            yPosition += 10;
-          }
+          // Espacement entre les paires de photos
+          yPosition += 10;
         }
 
         groupIndex++;
