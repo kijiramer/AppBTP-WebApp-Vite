@@ -307,9 +307,21 @@ export default function RapportPhoto() {
         groupedConstatations[key].photos.push(constatation);
       });
 
-      // Titre du rapport (une seule fois au début)
+      // Titre du rapport (une seule fois au début) - Centré et surligné
       pdf.setFontSize(20);
-      pdf.text(`Rapport Photo d'Intervention - Dossier ${selectedFolder}`, 20, yPosition);
+      pdf.setFont(undefined, 'bold');
+      const titleText = `Rapport Photo d'Intervention - Dossier ${selectedFolder}`;
+      const titleWidth = pdf.getTextWidth(titleText);
+      const centerX = (pdf.internal.pageSize.width - titleWidth) / 2;
+
+      // Ajouter un fond surligné
+      pdf.setFillColor(255, 255, 0); // Jaune
+      pdf.rect(centerX - 5, yPosition - 7, titleWidth + 10, 12, 'F');
+
+      // Texte centré
+      pdf.setTextColor(0, 0, 0); // Noir
+      pdf.text(titleText, centerX, yPosition);
+      pdf.setTextColor(0, 0, 0); // Réinitialiser la couleur
       yPosition += 15;
 
       // Pour chaque groupe de constatations
@@ -354,7 +366,10 @@ export default function RapportPhoto() {
           // Images avant/après
           if (constatation.imageAvant && constatation.imageApres) {
             try {
-              // Image AVANT
+              // Label et Image AVANT
+              pdf.setFontSize(10);
+              pdf.setFont(undefined, 'bold');
+              pdf.text('AVANT', 45, yPosition - 2);
               pdf.addImage(constatation.imageAvant, 'JPEG', 20, yPosition, 70, 50);
 
               // Flèche horizontale entre les deux images (ligne + triangle)
@@ -386,7 +401,10 @@ export default function RapportPhoto() {
                 'F'
               );
 
-              // Image APRÈS
+              // Label et Image APRÈS
+              pdf.setFontSize(10);
+              pdf.setFont(undefined, 'bold');
+              pdf.text('APRÈS', 135, yPosition - 2);
               pdf.addImage(constatation.imageApres, 'JPEG', 110, yPosition, 70, 50);
 
               yPosition += 55;
