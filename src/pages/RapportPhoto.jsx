@@ -293,23 +293,18 @@ export default function RapportPhoto() {
           // Images avant/après
           if (constatation.imageAvant && constatation.imageApres) {
             try {
-              pdf.setFontSize(10);
-              pdf.setFont(undefined, 'normal');
-
               // Image AVANT
-              pdf.text('AVANT:', 20, yPosition);
-              pdf.addImage(constatation.imageAvant, 'JPEG', 20, yPosition + 2, 70, 50);
+              pdf.addImage(constatation.imageAvant, 'JPEG', 20, yPosition, 70, 50);
 
-              // Flèche
+              // Flèche entre les deux images
               pdf.setFontSize(16);
+              pdf.setFont(undefined, 'bold');
               pdf.text('→', 100, yPosition + 25);
 
               // Image APRÈS
-              pdf.setFontSize(10);
-              pdf.text('APRÈS:', 110, yPosition);
-              pdf.addImage(constatation.imageApres, 'JPEG', 110, yPosition + 2, 70, 50);
+              pdf.addImage(constatation.imageApres, 'JPEG', 110, yPosition, 70, 50);
 
-              yPosition += 60;
+              yPosition += 55;
             } catch (error) {
               console.warn('Erreur lors de l\'ajout des images:', error);
               pdf.setFont(undefined, 'normal');
