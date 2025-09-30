@@ -270,22 +270,9 @@ export default function RapportPhoto() {
         // Informations du chantier (affichées UNE SEULE FOIS)
         pdf.setFontSize(12);
         pdf.setFont(undefined, 'bold');
-        pdf.text('Informations du chantier:', 20, yPosition);
+        pdf.text(`Entreprise : ${group.info.company} - Ville : ${group.info.city} - Tâche : ${group.info.task}`, 20, yPosition);
         yPosition += 8;
-
-        pdf.setFont(undefined, 'normal');
-        pdf.setFontSize(10);
-        pdf.text(`Ville: ${group.info.city}`, 20, yPosition);
-        yPosition += 6;
-        pdf.text(`Bâtiment: ${group.info.building}`, 20, yPosition);
-        yPosition += 6;
-        pdf.text(`Tâche: ${group.info.task}`, 20, yPosition);
-        yPosition += 6;
-        pdf.text(`Entreprise: ${group.info.company}`, 20, yPosition);
-        yPosition += 6;
-        pdf.text(`Date: ${new Date(group.info.selectedDate).toLocaleDateString('fr-FR')}`, 20, yPosition);
-        yPosition += 6;
-        pdf.text(`Utilisateur: ${user.name || user.email}`, 20, yPosition);
+        pdf.text(`Intervention le : ${new Date(group.info.selectedDate).toLocaleDateString('fr-FR')}`, 20, yPosition);
         yPosition += 15;
 
         // Separator line
@@ -302,12 +289,6 @@ export default function RapportPhoto() {
             pdf.addPage();
             yPosition = 20;
           }
-
-          // Numéro de la photo
-          pdf.setFontSize(12);
-          pdf.setFont(undefined, 'bold');
-          pdf.text(`Photo ${i + 1}/${group.photos.length}`, 20, yPosition);
-          yPosition += 8;
 
           // Images avant/après
           if (constatation.imageAvant && constatation.imageApres) {
@@ -338,7 +319,18 @@ export default function RapportPhoto() {
             }
           }
 
-          yPosition += 10;
+          // Ajouter une flèche entre les paires de photos (sauf après la dernière)
+          if (i < group.photos.length - 1) {
+            pdf.setFontSize(20);
+            pdf.setFont(undefined, 'bold');
+            const arrowText = '↓';
+            const textWidth = pdf.getTextWidth(arrowText);
+            const centerX = (pdf.internal.pageSize.width - textWidth) / 2;
+            pdf.text(arrowText, centerX, yPosition + 5);
+            yPosition += 15;
+          } else {
+            yPosition += 10;
+          }
         }
 
         groupIndex++;
