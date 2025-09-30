@@ -31,11 +31,13 @@ export default function RapportPhoto() {
 
   // Informations générales du rapport
   const [rapportInfo, setRapportInfo] = useState({
+    chantierName: '',
     city: '',
     building: '',
     task: '',
     company: '',
-    selectedDate: new Date().toISOString().split('T')[0]
+    selectedDate: new Date().toISOString().split('T')[0],
+    endDate: ''
   });
 
   // Liste des paires de photos
@@ -151,7 +153,7 @@ export default function RapportPhoto() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!rapportInfo.city || !rapportInfo.building || !rapportInfo.task || !rapportInfo.company) {
+    if (!rapportInfo.chantierName || !rapportInfo.city || !rapportInfo.building || !rapportInfo.task || !rapportInfo.company) {
       setError('Veuillez remplir toutes les informations du rapport');
       return;
     }
@@ -226,11 +228,13 @@ export default function RapportPhoto() {
 
   const resetForm = () => {
     setRapportInfo({
+      chantierName: '',
       city: '',
       building: '',
       task: '',
       company: '',
-      selectedDate: new Date().toISOString().split('T')[0]
+      selectedDate: new Date().toISOString().split('T')[0],
+      endDate: ''
     });
     setPhotos([]);
   };
@@ -260,6 +264,24 @@ export default function RapportPhoto() {
     }
   };
 
+  const loadLogoAsBase64 = () => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const dataURL = canvas.toDataURL('image/jpeg');
+        resolve(dataURL);
+      };
+      img.onerror = () => reject(new Error('Erreur lors du chargement du logo'));
+      img.src = '/logo.jpg';
+    });
+  };
+
   const exportToPDF = async () => {
     // Demander quel dossier exporter
     const availableFolders = [...new Set(constatations.map(c => c.reportNumber))].sort((a, b) => a - b);
@@ -282,24 +304,37 @@ export default function RapportPhoto() {
     }
 
     try {
+      // Charger le logo en base64
+      let logoDataURL = null;
+      try {
+        logoDataURL = await loadLogoAsBase64();
+      } catch (error) {
+        console.warn('Logo non chargé:', error);
+      }
+
       const pdf = new jsPDF();
-      let yPosition = 20;
+      let yPosition = 10; // Position de départ pour le logo
 
       // Filtrer les constatations pour le dossier sélectionné
       const folderConstatations = constatations.filter(c => c.reportNumber === selectedFolder);
 
-      // Grouper les constatations par chantier (city, building, task, company, date)
+      // Obtenir le nom du chantier
+      const chantierName = folderConstatations.length > 0 ? folderConstatations[0].chantierName : `Dossier ${selectedFolder}`;
+
+      // Grouper les constatations par chantier (city, building, task, company, date, endDate)
       const groupedConstatations = {};
       folderConstatations.forEach((constatation) => {
-        const key = `${constatation.city}|${constatation.building}|${constatation.task}|${constatation.company}|${constatation.selectedDate}`;
+        const key = `${constatation.city}|${constatation.building}|${constatation.task}|${constatation.company}|${constatation.selectedDate}|${constatation.endDate || ''}`;
         if (!groupedConstatations[key]) {
           groupedConstatations[key] = {
             info: {
+              chantierName: constatation.chantierName,
               city: constatation.city,
               building: constatation.building,
               task: constatation.task,
               company: constatation.company,
-              selectedDate: constatation.selectedDate
+              selectedDate: constatation.selectedDate,
+              endDate: constatation.endDate
             },
             photos: []
           };
@@ -307,21 +342,35 @@ export default function RapportPhoto() {
         groupedConstatations[key].photos.push(constatation);
       });
 
-      // Titre du rapport (une seule fois au début) - Centré et surligné
+      // Ajouter le logo centré en haut de la première page
+      if (logoDataURL) {
+        try {
+          const logoWidth = 60;
+          const logoHeight = 30;
+          const logoX = (pdf.internal.pageSize.width - logoWidth) / 2;
+          pdf.addImage(logoDataURL, 'JPEG', logoX, yPosition, logoWidth, logoHeight);
+          yPosition += logoHeight + 10; // Espace après le logo
+        } catch (error) {
+          console.warn('Erreur lors de l\'ajout du logo:', error);
+        }
+      }
+
+      // Titre du rapport (une seule fois au début) - Centré et souligné
       pdf.setFontSize(20);
       pdf.setFont(undefined, 'bold');
-      const titleText = `Rapport Photo d'Intervention - Dossier ${selectedFolder}`;
+      const titleText = `Rapport Photo d'Intervention - ${chantierName}`;
       const titleWidth = pdf.getTextWidth(titleText);
       const centerX = (pdf.internal.pageSize.width - titleWidth) / 2;
 
-      // Ajouter un fond surligné
-      pdf.setFillColor(255, 255, 0); // Jaune
-      pdf.rect(centerX - 5, yPosition - 7, titleWidth + 10, 12, 'F');
-
       // Texte centré
-      pdf.setTextColor(0, 0, 0); // Noir
+      pdf.setTextColor(0, 0, 0);
       pdf.text(titleText, centerX, yPosition);
-      pdf.setTextColor(0, 0, 0); // Réinitialiser la couleur
+
+      // Ligne de soulignement
+      pdf.setLineWidth(0.5);
+      pdf.setDrawColor(0, 0, 0);
+      pdf.line(centerX, yPosition + 2, centerX + titleWidth, yPosition + 2);
+
       yPosition += 15;
 
       // Pour chaque groupe de constatations
@@ -332,7 +381,7 @@ export default function RapportPhoto() {
         // Vérifier si on a besoin d'une nouvelle page pour afficher les infos du groupe
         if (yPosition > 240) {
           pdf.addPage();
-          yPosition = 20;
+          yPosition = 30; // Espace pour le logo pages 2+ (10 + 15 + 5)
         }
 
         // Afficher les informations du chantier pour ce groupe
@@ -341,17 +390,40 @@ export default function RapportPhoto() {
           yPosition += 10;
         }
 
-        pdf.setFontSize(12);
-        pdf.setFont(undefined, 'bold');
-        pdf.text(`Entreprise : ${group.info.company} - Ville : ${group.info.city} - Tâche : ${group.info.task}`, 20, yPosition);
-        yPosition += 8;
-        pdf.text(`Intervention le : ${new Date(group.info.selectedDate).toLocaleDateString('fr-FR')}`, 20, yPosition);
-        yPosition += 15;
+        // Créer un tableau centré avec 2 lignes et 1 colonne
+        const tableWidth = 160;
+        const tableX = (pdf.internal.pageSize.width - tableWidth) / 2;
+        const rowHeight = 10;
 
-        // Separator line
+        // Ligne 1 : Promoteur, Ville, Tâche
+        const line1 = `Promoteur : ${group.info.company} - Ville : ${group.info.city} - Tâche : ${group.info.task}`;
+
+        // Ligne 2 : Date(s)
+        const startDate = new Date(group.info.selectedDate).toLocaleDateString('fr-FR');
+        let line2;
+        if (group.info.endDate) {
+          const endDateFormatted = new Date(group.info.endDate).toLocaleDateString('fr-FR');
+          line2 = `Intervention du ${startDate} au ${endDateFormatted}`;
+        } else {
+          line2 = `Intervention le : ${startDate}`;
+        }
+
+        // Dessiner le tableau
         pdf.setLineWidth(0.5);
-        pdf.line(20, yPosition, 190, yPosition);
-        yPosition += 10;
+        pdf.setDrawColor(0, 0, 0);
+
+        // Bordures du tableau
+        pdf.rect(tableX, yPosition, tableWidth, rowHeight * 2);
+        // Ligne horizontale entre les 2 lignes
+        pdf.line(tableX, yPosition + rowHeight, tableX + tableWidth, yPosition + rowHeight);
+
+        // Texte dans le tableau
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(line1, tableX + 2, yPosition + 7);
+        pdf.text(line2, tableX + 2, yPosition + rowHeight + 7);
+
+        yPosition += rowHeight * 2 + 10;
 
         // Liste des photos pour ce chantier
         for (let i = 0; i < group.photos.length; i++) {
@@ -360,7 +432,7 @@ export default function RapportPhoto() {
           // Vérifier si on a besoin d'une nouvelle page
           if (yPosition > 220) {
             pdf.addPage();
-            yPosition = 20;
+            yPosition = 30; // Espace pour le logo pages 2+ (10 + 15 + 5)
           }
 
           // Images avant/après
@@ -422,6 +494,33 @@ export default function RapportPhoto() {
         }
 
         groupIndex++;
+      }
+
+      // Ajouter la numérotation des pages et le logo sur chaque page
+      const totalPages = pdf.internal.getNumberOfPages();
+
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+
+        // Ajouter le logo en haut à gauche des pages 2+ (deux fois moins grand)
+        // (La page 1 a déjà le logo centré ajouté en haut du document)
+        if (logoDataURL && i > 1) {
+          try {
+            const logoWidth = 30;
+            const logoHeight = 15;
+            pdf.addImage(logoDataURL, 'JPEG', 10, 10, logoWidth, logoHeight);
+          } catch (error) {
+            console.warn('Erreur lors de l\'ajout du logo:', error);
+          }
+        }
+
+        // Ajouter la numérotation en bas de page
+        pdf.setFontSize(10);
+        pdf.setFont(undefined, 'normal');
+        const pageText = `Page ${i} / ${totalPages}`;
+        const textWidth = pdf.getTextWidth(pageText);
+        const pageWidth = pdf.internal.pageSize.width;
+        pdf.text(pageText, (pageWidth - textWidth) / 2, pdf.internal.pageSize.height - 10);
       }
 
       const fileName = `rapport-intervention-dossier-${selectedFolder}-${new Date().toISOString().split('T')[0]}.pdf`;
@@ -534,6 +633,21 @@ export default function RapportPhoto() {
           <Card.Body>
             <Form>
               <Row>
+                <Col md={12}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Nom du chantier</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={rapportInfo.chantierName}
+                      onChange={(e) => setRapportInfo({...rapportInfo, chantierName: e.target.value})}
+                      placeholder="Ex: Résidence Les Jardins"
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row>
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>Ville</Form.Label>
@@ -575,27 +689,41 @@ export default function RapportPhoto() {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Entreprise</Form.Label>
+                    <Form.Label>Promoteur</Form.Label>
                     <Form.Control
                       type="text"
                       value={rapportInfo.company}
                       onChange={(e) => setRapportInfo({...rapportInfo, company: e.target.value})}
-                      placeholder="Ex: BTP Pro"
+                      placeholder="Ex: HOPRA"
                       required
                     />
                   </Form.Group>
                 </Col>
               </Row>
 
-              <Form.Group className="mb-3">
-                <Form.Label>Date</Form.Label>
-                <Form.Control
-                  type="date"
-                  value={rapportInfo.selectedDate}
-                  onChange={(e) => setRapportInfo({...rapportInfo, selectedDate: e.target.value})}
-                  required
-                />
-              </Form.Group>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Date de début</Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={rapportInfo.selectedDate}
+                      onChange={(e) => setRapportInfo({...rapportInfo, selectedDate: e.target.value})}
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Date de fin (optionnelle)</Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={rapportInfo.endDate}
+                      onChange={(e) => setRapportInfo({...rapportInfo, endDate: e.target.value})}
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
             </Form>
           </Card.Body>
         </Card>
@@ -780,7 +908,7 @@ export default function RapportPhoto() {
                             <strong>Ville :</strong> {firstPhoto.city}<br/>
                             <strong>Bâtiment :</strong> {firstPhoto.building}<br/>
                             <strong>Tâche :</strong> {firstPhoto.task}<br/>
-                            <strong>Entreprise :</strong> {firstPhoto.company}<br/>
+                            <strong>Promoteur :</strong> {firstPhoto.company}<br/>
                             <strong>Date :</strong> {new Date(firstPhoto.selectedDate).toLocaleDateString('fr-FR')}<br/>
                             <strong>Nombre de photos :</strong> {reportPhotos.length} paire(s)
                           </div>

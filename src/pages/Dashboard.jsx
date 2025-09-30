@@ -90,6 +90,7 @@ export default function Dashboard() {
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="me-auto">
               <Nav.Link active>Accueil</Nav.Link>
+              <Nav.Link onClick={() => navigate('/rapport-photo')}>📷 Rapport Photo</Nav.Link>
               <Nav.Link onClick={() => alert('Notes (à implémenter)')}>Notes</Nav.Link>
               <Nav.Link onClick={() => alert('Effectifs (à implémenter)')}>Effectifs</Nav.Link>
             </Nav>

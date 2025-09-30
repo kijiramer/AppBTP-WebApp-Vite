@@ -8,6 +8,7 @@ import './index.css';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import RapportPhoto from './pages/RapportPhoto';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/rapport-photo" element={<RapportPhoto />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
