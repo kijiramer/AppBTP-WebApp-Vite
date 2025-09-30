@@ -129,8 +129,7 @@ export default function RapportPhoto() {
       imageAvant: null,
       imageApres: null,
       previewAvant: '',
-      previewApres: '',
-      remarque: ''
+      previewApres: ''
     }]);
   };
 
@@ -176,8 +175,7 @@ export default function RapportPhoto() {
         const constatationData = {
           ...rapportInfo,
           imageAvant: imageAvantBase64,
-          imageApres: imageApresBase64,
-          remarque: photo.remarque || ''
+          imageApres: imageApresBase64
         };
 
         console.log(`Envoi de la paire ${i + 1}/${photos.length} au backend...`);
@@ -338,20 +336,6 @@ export default function RapportPhoto() {
               pdf.text('Images non disponibles', 20, yPosition);
               yPosition += 10;
             }
-          }
-
-          // Remarque (si présente)
-          if (constatation.remarque && constatation.remarque.trim() !== '') {
-            pdf.setFontSize(10);
-            pdf.setFont(undefined, 'bold');
-            pdf.text('Remarque:', 20, yPosition);
-            yPosition += 6;
-
-            pdf.setFont(undefined, 'normal');
-            // Diviser le texte en plusieurs lignes si nécessaire
-            const splitRemarque = pdf.splitTextToSize(constatation.remarque, 170);
-            pdf.text(splitRemarque, 20, yPosition);
-            yPosition += (splitRemarque.length * 5) + 5;
           }
 
           yPosition += 10;
@@ -622,25 +606,6 @@ export default function RapportPhoto() {
                           </Form.Group>
                         </Col>
                       </Row>
-
-                      <Row className="mt-3">
-                        <Col>
-                          <Form.Group>
-                            <Form.Label>Remarque (optionnel)</Form.Label>
-                            <Form.Control
-                              as="textarea"
-                              rows={3}
-                              placeholder="Ajoutez une remarque pour cette paire de photos..."
-                              value={photo.remarque}
-                              onChange={(e) => {
-                                const newPhotos = [...photos];
-                                newPhotos[index].remarque = e.target.value;
-                                setPhotos(newPhotos);
-                              }}
-                            />
-                          </Form.Group>
-                        </Col>
-                      </Row>
                     </Card.Body>
                   </Card>
                 ))}
@@ -722,20 +687,6 @@ export default function RapportPhoto() {
                           <strong>Entreprise :</strong> {constatation.company}<br/>
                           <strong>Date :</strong> {new Date(constatation.selectedDate).toLocaleDateString('fr-FR')}
                         </div>
-
-                        {constatation.remarque && constatation.remarque.trim() !== '' && (
-                          <div className="mb-3" style={{
-                            background: '#f8f9fa',
-                            padding: '10px',
-                            borderRadius: '6px',
-                            borderLeft: '3px solid #F85F6A'
-                          }}>
-                            <strong>Remarque :</strong><br/>
-                            <span style={{ fontSize: '0.9em', color: '#555' }}>
-                              {constatation.remarque}
-                            </span>
-                          </div>
-                        )}
 
                         {constatation.imageAvant && constatation.imageApres && (
                           <div className="mb-3">
