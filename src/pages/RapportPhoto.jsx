@@ -341,6 +341,14 @@ export default function RapportPhoto() {
       // Obtenir l'intitulé de la mission
       const intituleMission = folderConstatations.length > 0 ? folderConstatations[0].intituleMission : `Dossier ${selectedFolder}`;
 
+      // DEBUG: Afficher les constatations du dossier
+      console.log('=== DEBUG PDF EXPORT ===');
+      console.log('Dossier sélectionné:', selectedFolder);
+      console.log('Nombre de constatations:', folderConstatations.length);
+      if (folderConstatations.length > 0) {
+        console.log('Première constatation:', folderConstatations[0]);
+      }
+
       // Grouper les constatations par chantier (city, building, task, company, date, endDate)
       const groupedConstatations = {};
       folderConstatations.forEach((constatation) => {
@@ -362,6 +370,13 @@ export default function RapportPhoto() {
         }
         groupedConstatations[key].photos.push(constatation);
       });
+
+      // DEBUG: Afficher les groupes créés
+      console.log('Groupes créés:', Object.keys(groupedConstatations).length);
+      for (const key in groupedConstatations) {
+        console.log('Groupe info:', groupedConstatations[key].info);
+        break; // Afficher seulement le premier groupe
+      }
 
       // Ajouter le logo centré en haut de la première page
       if (logoDataURL) {
@@ -444,15 +459,23 @@ export default function RapportPhoto() {
         // Utiliser une police stylée (Helvetica)
         pdf.setFont('helvetica');
 
+        // DEBUG: Afficher les données utilisées pour l'en-tête
+        console.log('=== DEBUG EN-TÊTE PDF ===');
+        console.log('company:', group.info.company);
+        console.log('city:', group.info.city);
+        console.log('task:', group.info.task);
+
         // Ligne 1 : PROMOTEUR et VILLE (en gras et majuscules)
         pdf.setFontSize(9);
         pdf.setFont('helvetica', 'bold');
         const line1Text = `PROMOTEUR: ${group.info.company.toUpperCase()} - VILLE: ${group.info.city.toUpperCase()}`;
+        console.log('Ligne 1:', line1Text);
         pdf.text(line1Text, tableX + 2, yPosition + 6);
 
         // Ligne 2 : Mission (en regular)
         pdf.setFont('helvetica', 'normal');
         const line2Text = `Mission: ${group.info.task}`;
+        console.log('Ligne 2:', line2Text);
         pdf.text(line2Text, tableX + 2, yPosition + rowHeight + 6);
 
         // Ligne 3 : Intervention (en regular)
