@@ -12,7 +12,8 @@ import {
   Image,
   Navbar,
   Nav,
-  Dropdown
+  Dropdown,
+  Modal
 } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -47,6 +48,20 @@ export default function RapportPhoto() {
 
   // État pour gérer quels dossiers sont dépliés (affichent toutes les photos)
   const [expandedFolders, setExpandedFolders] = useState({});
+
+  // État pour le modal d'édition des informations du dossier
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingFolder, setEditingFolder] = useState(null);
+  const [editFolderInfo, setEditFolderInfo] = useState({
+    intituleMission: '',
+    chantierName: '',
+    company: '',
+    city: '',
+    building: '',
+    task: '',
+    selectedDate: '',
+    endDate: ''
+  });
 
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
@@ -279,6 +294,48 @@ export default function RapportPhoto() {
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
       setError('Impossible de supprimer le rapport');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditFolder = (reportNum, folderData) => {
+    setEditingFolder(reportNum);
+    setEditFolderInfo({
+      intituleMission: folderData.intituleMission || '',
+      chantierName: folderData.chantierName || '',
+      company: folderData.company || '',
+      city: folderData.city || '',
+      building: folderData.building || '',
+      task: folderData.task || '',
+      selectedDate: folderData.selectedDate ? new Date(folderData.selectedDate).toISOString().split('T')[0] : '',
+      endDate: folderData.endDate ? new Date(folderData.endDate).toISOString().split('T')[0] : ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // Mettre à jour toutes les constatations du dossier
+      const folderConstatations = constatations.filter(c => c.reportNumber === editingFolder);
+
+      for (const constatation of folderConstatations) {
+        await axios.put(`${API_BASE_URL}/constatations/${constatation._id}`, {
+          ...editFolderInfo
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+
+      setSuccess('Informations du dossier mises à jour avec succès !');
+      setShowEditModal(false);
+      fetchConstatations();
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+      setError('Impossible de mettre à jour les informations');
     } finally {
       setLoading(false);
     }
@@ -990,10 +1047,25 @@ export default function RapportPhoto() {
                             background: 'linear-gradient(135deg, #F85F6A 0%, #e74c3c 100%)',
                             color: 'white',
                             fontWeight: '600',
-                            fontSize: '1.2rem'
+                            fontSize: '1.2rem',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
                           }}
                         >
-                          📁 Dossier {reportNum}
+                          <span>📁 Dossier {reportNum}</span>
+                          <Button
+                            variant="outline-light"
+                            size="sm"
+                            onClick={() => handleEditFolder(reportNum, firstPhoto)}
+                            style={{
+                              border: '1px solid rgba(255,255,255,0.5)',
+                              fontSize: '1rem'
+                            }}
+                            title="Modifier les informations du dossier"
+                          >
+                            ⚙️
+                          </Button>
                         </Card.Header>
                         <Card.Body>
                           {/* Informations du dossier */}
@@ -1083,6 +1155,132 @@ export default function RapportPhoto() {
             )}
           </Col>
         </Row>
+
+        {/* Modal d'édition des informations du dossier */}
+        <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg">
+          <Modal.Header closeButton style={{ background: 'linear-gradient(135deg, #F85F6A 0%, #e74c3c 100%)', color: 'white' }}>
+            <Modal.Title>⚙️ Modifier les informations du dossier {editingFolder}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form>
+              <Row>
+                <Col md={12}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Intitulé mission</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFolderInfo.intituleMission}
+                      onChange={(e) => setEditFolderInfo({...editFolderInfo, intituleMission: e.target.value})}
+                      placeholder="Ex: Résidence Les Jardins"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Nom du chantier</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFolderInfo.chantierName}
+                      onChange={(e) => setEditFolderInfo({...editFolderInfo, chantierName: e.target.value})}
+                      placeholder="Ex: Chantier Nord"
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Entreprise</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFolderInfo.company}
+                      onChange={(e) => setEditFolderInfo({...editFolderInfo, company: e.target.value})}
+                      placeholder="Ex: Entreprise BTP"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Ville</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFolderInfo.city}
+                      onChange={(e) => setEditFolderInfo({...editFolderInfo, city: e.target.value})}
+                      placeholder="Ex: Paris"
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Bâtiment</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFolderInfo.building}
+                      onChange={(e) => setEditFolderInfo({...editFolderInfo, building: e.target.value})}
+                      placeholder="Ex: Bâtiment A"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row>
+                <Col md={12}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Mission</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={editFolderInfo.task}
+                      onChange={(e) => setEditFolderInfo({...editFolderInfo, task: e.target.value})}
+                      placeholder="Ex: Peinture"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Date de début</Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={editFolderInfo.selectedDate}
+                      onChange={(e) => setEditFolderInfo({...editFolderInfo, selectedDate: e.target.value})}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Date de fin (optionnelle)</Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={editFolderInfo.endDate}
+                      onChange={(e) => setEditFolderInfo({...editFolderInfo, endDate: e.target.value})}
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+            </Form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+              Annuler
+            </Button>
+            <Button
+              style={{
+                background: 'linear-gradient(135deg, #F85F6A 0%, #e74c3c 100%)',
+                border: 'none'
+              }}
+              onClick={handleSaveEdit}
+              disabled={loading}
+            >
+              {loading ? <Spinner size="sm" /> : '💾 Sauvegarder'}
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
     </>
   );
