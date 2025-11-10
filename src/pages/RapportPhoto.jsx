@@ -341,17 +341,19 @@ export default function RapportPhoto() {
       // Obtenir l'intitulé de la mission
       const intituleMission = folderConstatations.length > 0 ? folderConstatations[0].intituleMission : `Dossier ${selectedFolder}`;
 
-      // Grouper les constatations par chantier (city, building, task, date, endDate)
+      // Grouper les constatations par chantier (city, building, task, company, date, endDate)
       const groupedConstatations = {};
       folderConstatations.forEach((constatation) => {
-        const key = `${constatation.city}|${constatation.building}|${constatation.task}|${constatation.selectedDate}|${constatation.endDate || ''}`;
+        const key = `${constatation.city}|${constatation.building}|${constatation.task}|${constatation.company}|${constatation.selectedDate}|${constatation.endDate || ''}`;
         if (!groupedConstatations[key]) {
           groupedConstatations[key] = {
             info: {
               intituleMission: constatation.intituleMission,
+              chantierName: constatation.chantierName,
               city: constatation.city,
               building: constatation.building,
               task: constatation.task,
+              company: constatation.company,
               selectedDate: constatation.selectedDate,
               endDate: constatation.endDate
             },
@@ -442,13 +444,10 @@ export default function RapportPhoto() {
         // Utiliser une police stylée (Helvetica)
         pdf.setFont('helvetica');
 
-        // Récupérer le promoteur (company) depuis les photos du groupe
-        const promoteur = group.photos[0]?.company || 'N/A';
-
         // Ligne 1 : PROMOTEUR et VILLE (en gras et majuscules)
         pdf.setFontSize(9);
         pdf.setFont('helvetica', 'bold');
-        const line1Text = `PROMOTEUR: ${promoteur.toUpperCase()} - VILLE: ${group.info.city.toUpperCase()}`;
+        const line1Text = `PROMOTEUR: ${group.info.company.toUpperCase()} - VILLE: ${group.info.city.toUpperCase()}`;
         pdf.text(line1Text, tableX + 2, yPosition + 6);
 
         // Ligne 2 : Mission (en regular)
