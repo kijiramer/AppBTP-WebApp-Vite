@@ -315,27 +315,37 @@ export default function RapportPhoto() {
   };
 
   const handleSaveEdit = async () => {
+    console.log('=== DÉBUT SAUVEGARDE ===');
+    console.log('Dossier en cours d\'édition:', editingFolder);
+    console.log('Données à sauvegarder:', editFolderInfo);
+
     try {
       setLoading(true);
       setError('');
 
       // Mettre à jour toutes les constatations du dossier
       const folderConstatations = constatations.filter(c => c.reportNumber === editingFolder);
+      console.log('Nombre de constatations à mettre à jour:', folderConstatations.length);
 
       for (const constatation of folderConstatations) {
-        await axios.put(`${API_BASE_URL}/constatations/${constatation._id}`, {
+        console.log('Mise à jour de la constatation:', constatation._id);
+        const response = await axios.put(`${API_BASE_URL}/constatations/${constatation._id}`, {
           ...editFolderInfo
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('Réponse serveur:', response.data);
       }
 
+      console.log('=== MISE À JOUR RÉUSSIE ===');
       setSuccess('Informations du dossier mises à jour avec succès !');
       setShowEditModal(false);
       fetchConstatations();
     } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error);
-      setError('Impossible de mettre à jour les informations');
+      console.error('=== ERREUR MISE À JOUR ===');
+      console.error('Erreur complète:', error);
+      console.error('Réponse serveur:', error.response?.data);
+      setError(`Impossible de mettre à jour: ${error.response?.data?.message || error.message}`);
     } finally {
       setLoading(false);
     }
