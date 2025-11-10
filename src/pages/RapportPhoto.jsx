@@ -1096,6 +1096,7 @@ export default function RapportPhoto() {
                         <Card.Body>
                           {/* Informations du dossier */}
                           <div className="mb-3">
+                            <strong>Intitulé mission :</strong> {firstPhoto.intituleMission || firstPhoto.chantierName || '—'}<br/>
                             <strong>Ville :</strong> {firstPhoto.city}<br/>
                             <strong>Bâtiment :</strong> {firstPhoto.building}<br/>
                             <strong>Mission :</strong> {firstPhoto.task}<br/>
