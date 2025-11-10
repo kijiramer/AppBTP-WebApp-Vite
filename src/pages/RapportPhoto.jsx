@@ -338,8 +338,10 @@ export default function RapportPhoto() {
       // Filtrer les constatations pour le dossier sélectionné
       const folderConstatations = constatations.filter(c => c.reportNumber === selectedFolder);
 
-      // Obtenir l'intitulé de la mission
-      const intituleMission = folderConstatations.length > 0 ? folderConstatations[0].intituleMission : `Dossier ${selectedFolder}`;
+      // Obtenir l'intitulé de la mission (avec fallback sur chantierName pour les anciennes données)
+      const intituleMission = folderConstatations.length > 0
+        ? (folderConstatations[0].intituleMission || folderConstatations[0].chantierName || `Dossier ${selectedFolder}`)
+        : `Dossier ${selectedFolder}`;
 
       // DEBUG: Afficher les constatations du dossier
       console.log('=== DEBUG PDF EXPORT ===');
