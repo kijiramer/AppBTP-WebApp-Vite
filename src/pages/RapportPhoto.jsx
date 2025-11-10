@@ -1,3 +1,4 @@
+// Rapport Photo d'Intervention - v1.1 - En-tête corrigé (PROMOTEUR + VILLE + Mission)
 import React, { useState, useEffect } from 'react';
 import {
   Container,
