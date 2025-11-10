@@ -31,17 +31,21 @@ export default function RapportPhoto() {
 
   // Informations générales du rapport
   const [rapportInfo, setRapportInfo] = useState({
+    intituleMission: '',
     chantierName: '',
+    company: '',
     city: '',
     building: '',
     task: '',
-    company: '',
     selectedDate: new Date().toISOString().split('T')[0],
     endDate: ''
   });
 
   // Liste des paires de photos
   const [photos, setPhotos] = useState([]);
+
+  // État pour gérer quels dossiers sont dépliés (affichent toutes les photos)
+  const [expandedFolders, setExpandedFolders] = useState({});
 
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
@@ -153,7 +157,7 @@ export default function RapportPhoto() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!rapportInfo.chantierName || !rapportInfo.city || !rapportInfo.building || !rapportInfo.task || !rapportInfo.company) {
+    if (!rapportInfo.intituleMission || !rapportInfo.chantierName || !rapportInfo.company || !rapportInfo.city || !rapportInfo.building || !rapportInfo.task) {
       setError('Veuillez remplir toutes les informations du rapport');
       return;
     }
@@ -186,12 +190,19 @@ export default function RapportPhoto() {
 
         const constatationData = {
           reportNumber: currentReportNumber,
-          ...rapportInfo,
+          chantierName: rapportInfo.chantierName,
+          intituleMission: rapportInfo.intituleMission,
+          city: rapportInfo.city,
+          building: rapportInfo.building,
+          task: rapportInfo.task,
+          company: rapportInfo.company,
+          selectedDate: rapportInfo.selectedDate,
           imageAvant: imageAvantBase64,
           imageApres: imageApresBase64
         };
 
         console.log(`Envoi de la paire ${i + 1}/${photos.length} au backend...`);
+        console.log('Données envoyées:', constatationData);
 
         if (!token) {
           throw new Error('Token manquant - veuillez vous reconnecter');
@@ -228,11 +239,12 @@ export default function RapportPhoto() {
 
   const resetForm = () => {
     setRapportInfo({
+      intituleMission: '',
       chantierName: '',
+      company: '',
       city: '',
       building: '',
       task: '',
-      company: '',
       selectedDate: new Date().toISOString().split('T')[0],
       endDate: ''
     });
@@ -242,6 +254,13 @@ export default function RapportPhoto() {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const toggleFolderExpansion = (reportNumber) => {
+    setExpandedFolders(prev => ({
+      ...prev,
+      [reportNumber]: !prev[reportNumber]
+    }));
   };
 
   const handleDelete = async (constatationId) => {
@@ -318,21 +337,20 @@ export default function RapportPhoto() {
       // Filtrer les constatations pour le dossier sélectionné
       const folderConstatations = constatations.filter(c => c.reportNumber === selectedFolder);
 
-      // Obtenir le nom du chantier
-      const chantierName = folderConstatations.length > 0 ? folderConstatations[0].chantierName : `Dossier ${selectedFolder}`;
+      // Obtenir l'intitulé de la mission
+      const intituleMission = folderConstatations.length > 0 ? folderConstatations[0].intituleMission : `Dossier ${selectedFolder}`;
 
-      // Grouper les constatations par chantier (city, building, task, company, date, endDate)
+      // Grouper les constatations par chantier (city, building, task, date, endDate)
       const groupedConstatations = {};
       folderConstatations.forEach((constatation) => {
-        const key = `${constatation.city}|${constatation.building}|${constatation.task}|${constatation.company}|${constatation.selectedDate}|${constatation.endDate || ''}`;
+        const key = `${constatation.city}|${constatation.building}|${constatation.task}|${constatation.selectedDate}|${constatation.endDate || ''}`;
         if (!groupedConstatations[key]) {
           groupedConstatations[key] = {
             info: {
-              chantierName: constatation.chantierName,
+              intituleMission: constatation.intituleMission,
               city: constatation.city,
               building: constatation.building,
               task: constatation.task,
-              company: constatation.company,
               selectedDate: constatation.selectedDate,
               endDate: constatation.endDate
             },
@@ -358,7 +376,7 @@ export default function RapportPhoto() {
       // Titre du rapport (une seule fois au début) - Centré et souligné avec police Times (style Bodoni)
       pdf.setFontSize(20);
       pdf.setFont('times', 'bold');
-      const titleText = `Rapport Photo d'Intervention - ${chantierName}`;
+      const titleText = `Rapport Photo d'Intervention - ${intituleMission}`;
       const titleWidth = pdf.getTextWidth(titleText);
       const centerX = (pdf.internal.pageSize.width - titleWidth) / 2;
 
@@ -401,8 +419,9 @@ export default function RapportPhoto() {
         // Créer un tableau centré avec 3 lignes et 1 colonne
         const tableWidth = 160;
         const tableX = (pdf.internal.pageSize.width - tableWidth) / 2;
-        const rowHeight = 10;
+        const rowHeight = 8;
         const radius = 3;
+        const totalRows = 3;
 
         // Dessiner le tableau avec coins arrondis
         pdf.setLineWidth(0.5);
@@ -410,9 +429,9 @@ export default function RapportPhoto() {
 
         // Utiliser roundedRect si disponible, sinon rectangle normal
         if (typeof pdf.roundedRect === 'function') {
-          pdf.roundedRect(tableX, yPosition, tableWidth, rowHeight * 3, radius, radius);
+          pdf.roundedRect(tableX, yPosition, tableWidth, rowHeight * totalRows, radius, radius);
         } else {
-          pdf.rect(tableX, yPosition, tableWidth, rowHeight * 3);
+          pdf.rect(tableX, yPosition, tableWidth, rowHeight * totalRows);
         }
 
         // Lignes horizontales entre les lignes
@@ -422,30 +441,32 @@ export default function RapportPhoto() {
         // Utiliser une police stylée (Helvetica)
         pdf.setFont('helvetica');
 
+        // Récupérer le promoteur (company) depuis les photos du groupe
+        const promoteur = group.photos[0]?.company || 'N/A';
+
         // Ligne 1 : PROMOTEUR et VILLE (en gras et majuscules)
         pdf.setFontSize(9);
         pdf.setFont('helvetica', 'bold');
-        const promoteurText = `PROMOTEUR: ${group.info.company.toUpperCase()} - VILLE: ${group.info.city.toUpperCase()}`;
-        pdf.text(promoteurText, tableX + 2, yPosition + 7);
+        const line1Text = `PROMOTEUR: ${promoteur.toUpperCase()} - VILLE: ${group.info.city.toUpperCase()}`;
+        pdf.text(line1Text, tableX + 2, yPosition + 6);
 
         // Ligne 2 : Mission (en regular)
         pdf.setFont('helvetica', 'normal');
-        const missionText = `Mission: ${group.info.task}`;
-        pdf.text(missionText, tableX + 2, yPosition + rowHeight + 7);
+        const line2Text = `Mission: ${group.info.task}`;
+        pdf.text(line2Text, tableX + 2, yPosition + rowHeight + 6);
 
         // Ligne 3 : Intervention (en regular)
-        pdf.setFont('helvetica', 'normal');
         const startDate = new Date(group.info.selectedDate).toLocaleDateString('fr-FR');
-        let interventionText;
+        let line3Text;
         if (group.info.endDate) {
           const endDateFormatted = new Date(group.info.endDate).toLocaleDateString('fr-FR');
-          interventionText = `Intervention du ${startDate} au ${endDateFormatted}`;
+          line3Text = `Intervention du ${startDate} au ${endDateFormatted}`;
         } else {
-          interventionText = `Intervention le: ${startDate}`;
+          line3Text = `Intervention le: ${startDate}`;
         }
-        pdf.text(interventionText, tableX + 2, yPosition + rowHeight * 2 + 7);
+        pdf.text(line3Text, tableX + 2, yPosition + rowHeight * 2 + 6);
 
-        yPosition += rowHeight * 3 + 10;
+        yPosition += rowHeight * totalRows + 10;
 
         // Liste des photos pour ce chantier
 
@@ -664,12 +685,39 @@ export default function RapportPhoto() {
               <Row>
                 <Col md={12}>
                   <Form.Group className="mb-3">
+                    <Form.Label>Intitulé mission</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={rapportInfo.intituleMission}
+                      onChange={(e) => setRapportInfo({...rapportInfo, intituleMission: e.target.value})}
+                      placeholder="Ex: Résidence Les Jardins"
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
                     <Form.Label>Nom du chantier</Form.Label>
                     <Form.Control
                       type="text"
                       value={rapportInfo.chantierName}
                       onChange={(e) => setRapportInfo({...rapportInfo, chantierName: e.target.value})}
-                      placeholder="Ex: Résidence Les Jardins"
+                      placeholder="Ex: Chantier Nord"
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Entreprise</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={rapportInfo.company}
+                      onChange={(e) => setRapportInfo({...rapportInfo, company: e.target.value})}
+                      placeholder="Ex: Entreprise BTP"
                       required
                     />
                   </Form.Group>
@@ -704,7 +752,7 @@ export default function RapportPhoto() {
               </Row>
 
               <Row>
-                <Col md={6}>
+                <Col md={12}>
                   <Form.Group className="mb-3">
                     <Form.Label>Mission</Form.Label>
                     <Form.Control
@@ -712,18 +760,6 @@ export default function RapportPhoto() {
                       value={rapportInfo.task}
                       onChange={(e) => setRapportInfo({...rapportInfo, task: e.target.value})}
                       placeholder="Ex: Peinture"
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Promoteur</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={rapportInfo.company}
-                      onChange={(e) => setRapportInfo({...rapportInfo, company: e.target.value})}
-                      placeholder="Ex: HOPRA"
                       required
                     />
                   </Form.Group>
@@ -918,6 +954,9 @@ export default function RapportPhoto() {
                   return Object.keys(groupedReports).sort((a, b) => Number(b) - Number(a)).map(reportNum => {
                     const reportPhotos = groupedReports[reportNum];
                     const firstPhoto = reportPhotos[0];
+                    const isExpanded = expandedFolders[reportNum];
+                    const photosToShow = isExpanded ? reportPhotos : reportPhotos.slice(0, 3);
+                    const hasMore = reportPhotos.length > 3;
 
                     return (
                       <Card key={reportNum} className="mb-4">
@@ -937,14 +976,13 @@ export default function RapportPhoto() {
                             <strong>Ville :</strong> {firstPhoto.city}<br/>
                             <strong>Bâtiment :</strong> {firstPhoto.building}<br/>
                             <strong>Mission :</strong> {firstPhoto.task}<br/>
-                            <strong>Promoteur :</strong> {firstPhoto.company}<br/>
                             <strong>Date :</strong> {new Date(firstPhoto.selectedDate).toLocaleDateString('fr-FR')}<br/>
                             <strong>Nombre de photos :</strong> {reportPhotos.length} paire(s)
                           </div>
 
                           {/* Photos du dossier */}
                           <Row>
-                            {reportPhotos.map((constatation, photoIndex) => (
+                            {photosToShow.map((constatation, photoIndex) => (
                               <Col key={constatation._id} xs={12} md={6} lg={4} className="mb-3">
                                 <Card>
                                   <Card.Header className="text-center" style={{ background: '#f8f9fa', fontWeight: '600' }}>
@@ -999,6 +1037,18 @@ export default function RapportPhoto() {
                               </Col>
                             ))}
                           </Row>
+
+                          {/* Bouton Plus/Moins si plus de 3 photos */}
+                          {hasMore && (
+                            <div className="text-center mt-3">
+                              <Button
+                                variant="outline-primary"
+                                onClick={() => toggleFolderExpansion(reportNum)}
+                              >
+                                {isExpanded ? '▲ Voir moins' : `▼ Voir plus (${reportPhotos.length - 3} photo(s) supplémentaire(s))`}
+                              </Button>
+                            </div>
+                          )}
                         </Card.Body>
                       </Card>
                     );
