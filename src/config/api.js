@@ -1,4 +1,5 @@
 // Configuration API pour la webapp AppBTP
+// Backend Vercel (nouveau projet propre)
 export const API_BASE_URL = 'https://appbtp-backend.vercel.app';
 
 export const endpoints = {

@@ -300,6 +300,12 @@ export default function RapportPhoto() {
   };
 
   const handleEditFolder = (reportNum, folderData) => {
+    console.log('=== HANDLEEDITFOLDER DEBUG ===');
+    console.log('reportNum reçu:', reportNum, 'type:', typeof reportNum);
+    console.log('folderData:', folderData);
+    console.log('Total constatations:', constatations.length);
+    console.log('Tous les reportNumbers dans constatations:', constatations.map(c => ({ id: c._id, reportNumber: c.reportNumber, type: typeof c.reportNumber })));
+
     setEditingFolder(reportNum);
     setEditFolderInfo({
       intituleMission: folderData.intituleMission || '',
@@ -316,7 +322,7 @@ export default function RapportPhoto() {
 
   const handleSaveEdit = async () => {
     console.log('=== DÉBUT SAUVEGARDE ===');
-    console.log('Dossier en cours d\'édition:', editingFolder);
+    console.log('Dossier en cours d\'édition:', editingFolder, 'type:', typeof editingFolder);
     console.log('Données à sauvegarder:', editFolderInfo);
 
     try {
@@ -324,7 +330,17 @@ export default function RapportPhoto() {
       setError('');
 
       // Mettre à jour toutes les constatations du dossier
-      const folderConstatations = constatations.filter(c => c.reportNumber === editingFolder);
+      console.log('Total constatations avant filtre:', constatations.length);
+      console.log('Premier constatation exemple:', constatations[0]);
+
+      // Test avec conversion en number
+      const folderConstatations = constatations.filter(c => {
+        const match = c.reportNumber === editingFolder || Number(c.reportNumber) === Number(editingFolder);
+        if (match) {
+          console.log('Match trouvé:', c._id, c.reportNumber);
+        }
+        return match;
+      });
       console.log('Nombre de constatations à mettre à jour:', folderConstatations.length);
 
       for (const constatation of folderConstatations) {
